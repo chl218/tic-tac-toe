@@ -66,38 +66,42 @@ int main(int argc, char* argv[]) {
    // printf("\n3x3 Board Simulation:\n");
    // for(int i = 0; i < 100; i++) {
    //    int res = game3x3.play();
+   //    printf("%d", res);
    //    game3x3.reset();
-   //    printf("%d", res);  
    // }
 
-   TicTacToe game4x4(16, agent1, agent2);
-   printf("\n4x4 Board Simulation:\n");
-   // for(int i = 0; i < 100; i++) {
-      int res = game4x4.play();
-      game4x4.reset();
-      printf("%d", res);
-   // }
+   // TicTacToe game4x4(16, agent1, agent2);
+   // printf("\n4x4 Board Simulation:\n");
+   // // for(int i = 0; i < 10; i++) {
+   //    int res = game4x4.play();
+   //    game4x4.printBoard();
+   //    game4x4.reset();
+   //    printf("%d\n", res);
+   // // }
 
    // TicTacToe game5x5(25, agent1, agent2);
    // printf("\n5x5 Board Simulation:\n");
-   // for(int i = 0; i < 100; i++) {
-   //    int res = game5x5.play();
+   // // for(int i = 0; i < 100; i++) {
+   //    res = game5x5.play();
+   //    game5x5.printBoard();
    //    game5x5.reset();
-   //    printf("%d", res);
-   // }
+   //    printf("%d\n", res);
+   // //}
    // printf("\n");
 
 
-   // TicTacToe game(boardSize, agent1, agent2);
-   // printf("Board Positions:\n");
-   // game.printBoardPositions();
-   // printf("\n");
-   // int res = game.play();
-   // switch(res) {
-   //    case 1: printf("Player 1 Wins!\n"); break;
-   //    case 2: printf("Player 2 Wins!\n"); break;
-   //    case 0: printf("Tie!\n"); break;
-   // }
+   TicTacToe game(boardSize, agent1, agent2);
+   printf("Board Positions:\n");
+   game.printBoardPositions();
+   printf("\n");
+   
+   int res = game.play();
+   game.printBoard();
+   switch(res) {
+      case 1: printf("Player 1 Wins!\n"); break;
+      case 2: printf("Player 2 Wins!\n"); break;
+      case 0: printf("Tie!\n"); break;
+   }
    
    return 0;
 }

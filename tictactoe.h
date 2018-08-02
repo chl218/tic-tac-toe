@@ -17,6 +17,11 @@ using namespace std;
 #define MAX_AGENT 11
 #define MIN_AGENT 22
 
+typedef struct Result {
+   int val;
+   int pos;
+   Result(int v, int p) : val(v), pos(p) {}
+} Result;
 
 class TicTacToe {
 
@@ -25,18 +30,25 @@ private:
    int boardSize;
    int N;
    int agent1, agent2;
-
-   vector<int> getValidMoves();
    
-   int minimax(int depth, int agent);
+   // int minimax(int depth, int agent);
    int getScore(int depth, int agent);
+   int gameResult();
+
    int computerVsComputer();
    int humanVsHuman();
    int humanVsComputer();
-   bool endState(char agent);
-
+   
    void humanMove(char agent);
    void computerMove(char agent);
+   
+   int alphabeta(int depth, int a, int b, int agent);
+   int computeBestMove(char agent);
+
+   bool isTerminalState();
+   bool hasGameEnded();
+   bool hasAgentWon(char agent);
+
 public:
 
    TicTacToe(int boardSize, int agent1, int agent2);
@@ -45,11 +57,7 @@ public:
    void printBoard();
    void printBoardPositions();
    void reset();
-
-   bool containsMoreMoves();
-   bool isValidMove(int position);
-   bool makeMove(int position);
-
+  
    int play();
 
 };

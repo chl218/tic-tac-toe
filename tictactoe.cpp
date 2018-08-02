@@ -1,6 +1,7 @@
 #include "tictactoe.h"
 
 
+
 TicTacToe::TicTacToe(int boardSize, int agent1, int agent2) {
    srand(time(NULL));
 
@@ -10,10 +11,6 @@ TicTacToe::TicTacToe(int boardSize, int agent1, int agent2) {
    this->boardSize = N*N;
    this->board = (char*)malloc(sizeof(char) * this->boardSize);
    memset(this->board, ' ', this->boardSize);
-
-
-
-
 }
 
 TicTacToe::~TicTacToe() {
@@ -82,23 +79,23 @@ void TicTacToe::printBoardPositions() {
       }
    }
 }
+
 void TicTacToe::reset() {
    for(int i = 0; i < boardSize; i++) {
       board[i] = ' ';
    }
 }
 
-bool TicTacToe::containsMoreMoves() {
+bool TicTacToe::hasGameEnded() {
    for(int i = 0; i < boardSize; i++) {
       if(board[i] == ' ') {
-         return true;
+         return false;
       }
    }
-   return false;
+   return true;
 }
 
-
-bool TicTacToe::endState(char agent) {
+bool TicTacToe::hasAgentWon(char agent) {
 
    bool done = true;
 
@@ -145,22 +142,20 @@ bool TicTacToe::endState(char agent) {
 }
 
 int TicTacToe::getScore(int depth, int agent) {
-   if(endState('O')) {
-      return depth - 10;
+   if(hasAgentWon('O')) {
+      return depth - 1000;
    }
-   if(endState('X')) {
-      return 10 - depth;
+   if(hasAgentWon('X')) {
+      return 1000 - depth;
    }
    return 0;
 }
 
+/**
 int TicTacToe::minimax(int depth, int agent) {
    printf("%d \n", depth);
-   // printf("minimax(%d, %d)\n", depth, agent);
-   // printBoard();
-   // printf("\n");
    int score = getScore(depth, agent);
-   // printf("score: %d\n", score);
+
    if(score != 0) {
       return score;
    }  
@@ -190,6 +185,92 @@ int TicTacToe::minimax(int depth, int agent) {
 
    return agent == MAX_AGENT ? maxAgentVal : minAgentVal;
 }
+**/
+
+bool TicTacToe::isTerminalState() {
+   return hasAgentWon('X') || hasAgentWon('O') || hasGameEnded(); 
+}
+
+int TicTacToe::alphabeta(int depth, int alpha, int beta, int agent){
+   // printBoard();
+   // getchar();
+
+   if(depth == 5 || isTerminalState()) {
+      return getScore(depth, agent);
+   }
+
+
+   if(agent == MAX_AGENT) {
+      int bestVal = INT_MIN;
+      for(int i = 0; i < boardSize; i++) {
+         if(board[i] == ' ') {
+            board[i] = 'X';
+            bestVal = max(bestVal, alphabeta(depth+1, alpha, beta, MIN_AGENT));
+            alpha   = max(bestVal, alpha);
+            board[i] = ' ';
+           
+            if(alpha >= beta) {
+               break;
+            }
+         }
+      }
+      return bestVal;
+   }
+   else {
+      int bestVal = INT_MAX;
+      for(int i = 0; i < boardSize; i++) {
+         if(board[i] == ' ') {
+            
+            board[i] = 'O';
+            bestVal = min(bestVal, alphabeta(depth+1, alpha, beta, MAX_AGENT));
+            beta    = min(bestVal, beta);
+            board[i] = ' ';
+
+
+            if(alpha >= beta) {
+               break;
+            }
+
+         }
+      }
+      return bestVal;  
+   }
+}
+
+int TicTacToe::computeBestMove(char agent) {
+   int bestVal = agent == 'X' ? INT_MIN : INT_MAX;
+   int bestPos =  -1;
+   int alpha = INT_MIN;
+   int beta  = INT_MAX;
+
+   for(int i = 0; i < boardSize; i++) {
+      if(board[i] == ' ') {
+         board[i] = agent;
+         int moveRes = alphabeta(0, alpha, beta, agent == 'X' ? MIN_AGENT : MAX_AGENT);
+         board[i] = ' ';
+
+         if(agent == 'X' && moveRes > bestVal) {
+            bestPos = i;
+            bestVal = moveRes;
+         }
+         if(agent == 'O' && moveRes < bestVal) {
+            bestPos = i;
+            bestVal = moveRes;
+         }
+      }
+   }
+   return bestPos;
+} 
+
+int TicTacToe::gameResult() {
+   if(hasAgentWon('X')) {
+      return 1;
+   }
+   if(hasAgentWon('O')) {
+      return 2;
+   }
+   return 0;
+}
 
 int TicTacToe::computerVsComputer() {
    char agent = 'X';
@@ -197,38 +278,32 @@ int TicTacToe::computerVsComputer() {
    int firstMove = rand() % boardSize + 1;
    board[firstMove] = agent;
 
-   
-   while(containsMoreMoves()) {
+   while(!isTerminalState()) {
       agent = agent == 'X' ? 'O' : 'X';
-
-      computerMove(agent);
-      if(endState(agent)) {
-         return agent == 'X' ? 1 : 2;
-      }
+      int position = computeBestMove(agent);
+      board[position] = agent;
    }
-   return 0;
+
+   return gameResult();
 }
 
 int TicTacToe::humanVsHuman() {
    char agent = 'X';
 
-   while(containsMoreMoves()) {
-   
+   while(!isTerminalState()) {
+      printBoard();   
       humanMove(agent);
-
-      if(endState(agent)) {
-         printBoard();
-         return agent == 'X' ? 1 : 2;
-      }
       agent = agent == 'X' ? 'O' : 'X';
    }
 
-   return 0;
+   return gameResult();
 }
 
 int TicTacToe::humanVsComputer() {
    char agent = 'X';
-   while(containsMoreMoves()) {
+
+   while(!isTerminalState()) {
+      printBoard();
       if(agent1 == HUMAN) {
          switch(agent) {
             case 'X': humanMove(agent);    break;
@@ -241,21 +316,19 @@ int TicTacToe::humanVsComputer() {
             case 'O': humanMove(agent);    break;
          }
       }
-
-      if(endState(agent)) {
-         printBoard();
-         return agent == 'X' ? 1 : 2;
-      }
       agent = agent == 'X' ? 'O' : 'X';
    }
 
-   return 0;
+   return gameResult();
+}
+
+void TicTacToe::computerMove(char agent) {
+   int position = computeBestMove(agent);
+   board[position] = agent;
+   printf("%c's turn. Selected position: %d\n\n", agent, position);
 }
 
 void TicTacToe::humanMove(char agent) {
-   // printf("humanMove()\n");
-   printBoard();
-   
    int pos = -1;
    do {
       char input[80];
@@ -270,32 +343,6 @@ void TicTacToe::humanMove(char agent) {
    board[pos-1] = agent;
 }
 
-void TicTacToe::computerMove(char agent) {
-   // printf("computerMove()\n");
-   int bestPos = 0;
-   int bestVal = agent == 'X' ? INT_MIN : INT_MAX;
-
-   for(int i = 0; i < boardSize; i++) {
-      printf("checking position: %d\n", i);
-      if(board[i] == ' ') {
-         board[i] = agent;
-         int val = minimax(0, agent == 'X' ? MIN_AGENT : MAX_AGENT);
-         board[i] = ' ';
-
-         if(agent == 'X' && val > bestVal) {
-            bestVal = val;
-            bestPos = i;
-         }
-         if(agent == 'O' && val < bestVal) {
-            bestVal = val;
-            bestPos = i;
-         }
-      }
-   }
-   board[bestPos] = agent;
-}
-
-
 int TicTacToe::play() {
 
    if(agent1 == COMPUTER && agent2 == COMPUTER) {
@@ -307,8 +354,5 @@ int TicTacToe::play() {
    else {
       return humanVsComputer();
    }
-
 }
 
-
-   
