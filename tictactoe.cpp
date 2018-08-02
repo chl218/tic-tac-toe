@@ -1,7 +1,11 @@
 #include "tictactoe.h"
 
 
-
+/*
+ * ============================================================================
+ * Constructor
+ * ============================================================================
+ */
 TicTacToe::TicTacToe(int boardSize, int agent1, int agent2) {
    srand(time(NULL));
 
@@ -11,15 +15,35 @@ TicTacToe::TicTacToe(int boardSize, int agent1, int agent2) {
    this->boardSize = N*N;
    this->board = (char*)malloc(sizeof(char) * this->boardSize);
    memset(this->board, ' ', this->boardSize);
+
+   // Set up Zobrist's table for hashing
+   this->zTable = (int**)malloc(sizeof(int*) * this->boardSize);
+   for(int i = 0; i < this->boardSize; i++) {
+      this->zTable[i] = (int*)malloc(sizeof(int)*2);
+      this->zTable[i][0] = rand();
+      this->zTable[i][1] = rand();
+   }
 }
 
+/*
+ * ============================================================================
+ * Destructor
+ * ============================================================================
+ */
 TicTacToe::~TicTacToe() {
-
    free(board);
+   for(int i = 0; i < boardSize; i++) {
+      free(zTable[i]);
+   }
+   free(zTable);
 }
 
+/*
+ * ============================================================================
+ * Print game board
+ * ============================================================================
+ */
 void TicTacToe::printBoard() {
-   // printf("Board\n");
    for(int i = 0; i < N; i++) {
       for(int j = 0; j < N; j++) {
          if(board[i*N+j] == ' ') {
@@ -46,6 +70,11 @@ void TicTacToe::printBoard() {
    }
 }
 
+/*
+ * ============================================================================
+ * Print board positions
+ * ============================================================================
+ */
 void TicTacToe::printBoardPositions() {
 
    int width = 0;
@@ -80,12 +109,25 @@ void TicTacToe::printBoardPositions() {
    }
 }
 
+/*
+ * ============================================================================
+ * Reset board and hash map
+ * ============================================================================
+ */
 void TicTacToe::reset() {
    for(int i = 0; i < boardSize; i++) {
       board[i] = ' ';
    }
+   hmap.clear();
 }
 
+/*
+ * ============================================================================
+ * Test if game has end
+ *    false - contains valid positions
+ *    true  - does not contain valid positions
+ * ============================================================================
+ */
 bool TicTacToe::hasGameEnded() {
    for(int i = 0; i < boardSize; i++) {
       if(board[i] == ' ') {
@@ -95,6 +137,11 @@ bool TicTacToe::hasGameEnded() {
    return true;
 }
 
+/*
+ * ============================================================================
+ * Check if agent has won game
+ * ============================================================================
+ */
 bool TicTacToe::hasAgentWon(char agent) {
 
    bool done = true;
@@ -141,6 +188,11 @@ bool TicTacToe::hasAgentWon(char agent) {
    return false;
 }
 
+/*
+ * ============================================================================
+ * Get board configuration score
+ * ============================================================================
+ */
 int TicTacToe::getScore(int depth, int agent) {
    if(hasAgentWon('O')) {
       return depth - 1000;
@@ -151,92 +203,109 @@ int TicTacToe::getScore(int depth, int agent) {
    return 0;
 }
 
-/**
-int TicTacToe::minimax(int depth, int agent) {
-   printf("%d \n", depth);
-   int score = getScore(depth, agent);
 
-   if(score != 0) {
-      return score;
-   }  
-
-   if(!containsMoreMoves()) {
-      return 0;
-   }
-
-   int maxAgentVal = INT_MIN;
-   int minAgentVal = INT_MAX;
-   for(int i = 0; i < boardSize; i++) {
-      if(board[i] == ' ') {
-         if(agent == MAX_AGENT) {
-            board[i] = 'X';
-            // getchar();
-            maxAgentVal = max(maxAgentVal, minimax(depth+1, MIN_AGENT));
-            board[i] = ' ';
-         }
-         else {
-            board[i] = 'O';
-            // getchar();
-            minAgentVal = min(minAgentVal, minimax(depth+1, MAX_AGENT));
-            board[i] = ' ';
-         }
-      }
-   }
-
-   return agent == MAX_AGENT ? maxAgentVal : minAgentVal;
-}
-**/
-
+/*
+ * ============================================================================
+ * Check if end game conditions are met
+ * ============================================================================
+ */
 bool TicTacToe::isTerminalState() {
    return hasAgentWon('X') || hasAgentWon('O') || hasGameEnded(); 
 }
 
+/*
+ * ============================================================================
+ * Heuristic Minimax algorithm with alpha-beta pruning and transposition table
+ *    - Heuristically stops at depth of 5
+ *    - Deterministic alpha-beta pruning of sub-configurations
+ *    - Deterministic pruning of same board configurations
+ * ============================================================================
+ */
 int TicTacToe::alphabeta(int depth, int alpha, int beta, int agent){
-   // printBoard();
-   // getchar();
 
+   // heurestic pruning
    if(depth == 5 || isTerminalState()) {
       return getScore(depth, agent);
    }
-
 
    if(agent == MAX_AGENT) {
       int bestVal = INT_MIN;
       for(int i = 0; i < boardSize; i++) {
          if(board[i] == ' ') {
             board[i] = 'X';
-            bestVal = max(bestVal, alphabeta(depth+1, alpha, beta, MIN_AGENT));
+
+            unsigned long hash = getHash(agent == 'X' ? 0 : 1);
+            unordered_map<unsigned long, int>::iterator it = hmap.find(hash);
+
+            if(it == hmap.end()) {
+               bestVal = max(bestVal, alphabeta(depth+1, alpha, beta, MIN_AGENT));
+            }
+            else {
+               bestVal = max(bestVal, hmap[hash]); // configuration pruning
+            }
+
             alpha   = max(bestVal, alpha);
             board[i] = ' ';
            
+            // deterministic pruning
             if(alpha >= beta) {
                break;
             }
-         }
-      }
+         } // end-if
+      } // end-for
       return bestVal;
    }
    else {
       int bestVal = INT_MAX;
       for(int i = 0; i < boardSize; i++) {
          if(board[i] == ' ') {
-            
             board[i] = 'O';
-            bestVal = min(bestVal, alphabeta(depth+1, alpha, beta, MAX_AGENT));
-            beta    = min(bestVal, beta);
+
+            unsigned long hash = getHash(agent == 'X' ? 0 : 1);
+            unordered_map<unsigned long, int>::iterator it = hmap.find(hash);
+
+            if(it == hmap.end()) {
+               bestVal = min(bestVal, alphabeta(depth+1, alpha, beta, MAX_AGENT));
+            }
+            else {
+               bestVal = min(bestVal, hmap[hash]); // configuration pruning
+            }
+
+            beta     = min(bestVal, beta);
             board[i] = ' ';
 
-
+            // deterministic pruning
             if(alpha >= beta) {
                break;
             }
-
-         }
-      }
+         } // end-if
+      } // end-for
       return bestVal;  
    }
 }
 
+
+/*
+ * ============================================================================
+ * Apply Zobrist hashing function
+ * ============================================================================
+ */
+unsigned long TicTacToe::getHash(int agent) {
+   unsigned long hash = 0;
+   for(int i = 0; i < boardSize; i++) {
+      if(board[i] != ' ') {
+         hash ^= zTable[i][agent];
+      }
+   }
+   return hash;
+}
+
+/*
+ * ============================================================================
+ * Return best value for a given board configuration
+ *    For each valid position, compute minimax algorithm
+ * ============================================================================
+ */
 int TicTacToe::computeBestMove(char agent) {
    int bestVal = agent == 'X' ? INT_MIN : INT_MAX;
    int bestPos =  -1;
@@ -246,22 +315,48 @@ int TicTacToe::computeBestMove(char agent) {
    for(int i = 0; i < boardSize; i++) {
       if(board[i] == ' ') {
          board[i] = agent;
-         int moveRes = alphabeta(0, alpha, beta, agent == 'X' ? MIN_AGENT : MAX_AGENT);
+
+         unsigned long hash = getHash(agent == 'X' ? 0 : 1);
+         unordered_map<unsigned long, int>::iterator it = hmap.find(hash);
+
+         int moveRes;
+         if(it == hmap.end()) {
+            moveRes = alphabeta(0, alpha, beta, agent == 'X' ? MIN_AGENT : MAX_AGENT);
+         }
+         else {
+            moveRes = hmap[hash];
+         }
+
+
          board[i] = ' ';
 
          if(agent == 'X' && moveRes > bestVal) {
             bestPos = i;
             bestVal = moveRes;
+            if(it == hmap.end()) {
+               hmap[hash] = bestVal;
+            }
          }
          if(agent == 'O' && moveRes < bestVal) {
             bestPos = i;
             bestVal = moveRes;
+            if(it == hmap.end()) {
+               hmap[hash] = bestVal;
+            }
          }
       }
    }
    return bestPos;
 } 
 
+/*
+ * ============================================================================
+ * Return the outcome of the game
+ *    1 - Player 1 wins
+ *    2 - Player 2 wins
+ *    0 - Tied
+ * ============================================================================
+ */
 int TicTacToe::gameResult() {
    if(hasAgentWon('X')) {
       return 1;
@@ -272,6 +367,11 @@ int TicTacToe::gameResult() {
    return 0;
 }
 
+/*
+ * ============================================================================
+ * Computer vs computer game mode
+ * ============================================================================
+ */
 int TicTacToe::computerVsComputer() {
    char agent = 'X';
 
@@ -287,6 +387,11 @@ int TicTacToe::computerVsComputer() {
    return gameResult();
 }
 
+/*
+ * ============================================================================
+ * Human vs human game mode
+ * ============================================================================
+ */
 int TicTacToe::humanVsHuman() {
    char agent = 'X';
 
@@ -299,6 +404,11 @@ int TicTacToe::humanVsHuman() {
    return gameResult();
 }
 
+/*
+ * ============================================================================
+ * Human vs computer game mode
+ * ============================================================================
+ */
 int TicTacToe::humanVsComputer() {
    char agent = 'X';
 
@@ -322,12 +432,24 @@ int TicTacToe::humanVsComputer() {
    return gameResult();
 }
 
+/*
+ * ============================================================================
+ * Computer Move
+ *    Apply minimax algorithm and select the best position on the board   
+ * ============================================================================
+ */
 void TicTacToe::computerMove(char agent) {
    int position = computeBestMove(agent);
    board[position] = agent;
    printf("%c's turn. Selected position: %d\n\n", agent, position);
 }
 
+/*
+ * ============================================================================
+ * Human Move
+ *    Selete a valid position on the board and set it to X/O accordingly   
+ * ============================================================================
+ */
 void TicTacToe::humanMove(char agent) {
    int pos = -1;
    do {
@@ -343,6 +465,12 @@ void TicTacToe::humanMove(char agent) {
    board[pos-1] = agent;
 }
 
+/*
+ * ============================================================================
+ * Game Types
+ *   Selete between human vs human, human vs computer, and compute vs computer
+ * ============================================================================
+ */
 int TicTacToe::play() {
 
    if(agent1 == COMPUTER && agent2 == COMPUTER) {

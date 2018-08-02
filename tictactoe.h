@@ -7,7 +7,7 @@
 #include <math.h>       // sqrt()
 #include <string.h>     // strcmp()
 #include <limits.h>     // INT_MAX, INT_MIN
-#include <vector>    
+#include <unordered_map>    
 
 using namespace std;
 
@@ -17,21 +17,18 @@ using namespace std;
 #define MAX_AGENT 11
 #define MIN_AGENT 22
 
-typedef struct Result {
-   int val;
-   int pos;
-   Result(int v, int p) : val(v), pos(p) {}
-} Result;
-
 class TicTacToe {
 
 private:
+   int **zTable;
    char *board;
    int boardSize;
    int N;
    int agent1, agent2;
    
-   // int minimax(int depth, int agent);
+   unordered_map<unsigned long, int> hmap;
+
+   unsigned long getHash(int agent);
    int getScore(int depth, int agent);
    int gameResult();
 
@@ -49,6 +46,7 @@ private:
    bool hasGameEnded();
    bool hasAgentWon(char agent);
 
+   
 public:
 
    TicTacToe(int boardSize, int agent1, int agent2);
