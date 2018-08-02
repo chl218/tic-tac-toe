@@ -3,7 +3,7 @@
 Game theory optimizations to speed up Tic Tac Toe of board size 4x4 and 5x5 </br>
   - Minimax game-tree algorithm
   - Alpha-beta pruning optimization
-  - Zobrist hashing function configuration pruning optimization
+  - Zobrist hashing function; pruning of same board configuration
   - Heuristic depth early termination optimization
   
 Game Mode
