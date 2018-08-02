@@ -11,3 +11,16 @@ Game Mode
   - Human Vs Human
   - Computer vs Human
 
+To run the program
+```
+/> make
+/> game 5x5 computer computer
+.
+.
+.
+/> game 4x4 human computer
+.
+.
+.
+/> game 3x3 human human
+```
